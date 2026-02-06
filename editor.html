@@ -172,6 +172,39 @@
             padding-top: 15px; border-top: 1px solid #eee;
             font-size: 0.9rem;
         }
+        
+        /* Стили для кнопок добавления */
+        .btn-add {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border: 2px solid var(--primary);
+            background: white;
+            color: var(--primary);
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .btn-add:hover {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.05);
+        }
+        .input-with-add {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .input-with-add select {
+            flex: 1;
+            min-width: 0;
+        }
+        
         @media (max-width: 768px) {
             .toolbar { flex-direction: column; align-items: stretch; }
             .period-controls { flex-direction: column; align-items: flex-start; }
@@ -268,6 +301,7 @@
         </footer>
     </div>
 
+    <!-- Модальное окно редактирования -->
     <div class="modal" id="lessonModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -277,6 +311,7 @@
             <form id="lessonForm" onsubmit="saveLesson(event)">
                 <input type="hidden" id="editIndex">
                 <div class="form-grid">
+                    <!-- День недели -->
                     <div class="form-group">
                         <label for="day">День недели *</label>
                         <select id="day" required>
@@ -288,6 +323,8 @@
                             <option value="Суббота">Суббота</option>
                         </select>
                     </div>
+                    
+                    <!-- Пара -->
                     <div class="form-group">
                         <label for="pair">Пара *</label>
                         <select id="pair" required>
@@ -298,21 +335,50 @@
                             <option value="9-10 урок">9-10 урок</option>
                         </select>
                     </div>
+                    
+                    <!-- Группа -->
                     <div class="form-group">
                         <label for="group">Группа *</label>
                         <input type="text" id="group" placeholder="напр. ИС-23" required>
                     </div>
+                    
+                    <!-- Предмет с кнопкой добавления -->
                     <div class="form-group">
                         <label for="subject">Предмет *</label>
-                        <input type="text" id="subject" placeholder="напр. Программирование" required>
+                        <div class="input-with-add">
+                            <select id="subject" required>
+                                <option value="">-- Выберите предмет --</option>
+                            </select>
+                            <button type="button" class="btn-add" onclick="addNewSubject()" title="Добавить новый предмет">
+                                ➕
+                            </button>
+                        </div>
                     </div>
+                    
+                    <!-- Преподаватель с кнопкой добавления -->
                     <div class="form-group">
-                        <label for="teacher">Преподаватель</label>
-                        <input type="text" id="teacher" placeholder="Фамилия И.О." value="Не указан">
+                        <label for="teacher">Преподаватель *</label>
+                        <div class="input-with-add">
+                            <select id="teacher" required>
+                                <option value="">-- Выберите преподавателя --</option>
+                            </select>
+                            <button type="button" class="btn-add" onclick="addNewTeacher()" title="Добавить нового преподавателя">
+                                ➕
+                            </button>
+                        </div>
                     </div>
+                    
+                    <!-- Аудитория с кнопкой добавления -->
                     <div class="form-group">
-                        <label for="room">Аудитория</label>
-                        <input type="text" id="room" placeholder="напр. каб. 207" value="—">
+                        <label for="room">Аудитория *</label>
+                        <div class="input-with-add">
+                            <select id="room" required>
+                                <option value="">-- Выберите кабинет --</option>
+                            </select>
+                            <button type="button" class="btn-add" onclick="addNewRoom()" title="Добавить новый кабинет">
+                                ➕
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -341,6 +407,7 @@
         </div>
     </div>
 
+    <!-- Система уведомлений -->
     <div class="notification" id="notification"></div>
 
     <script src="editor.js"></script>
