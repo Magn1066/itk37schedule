@@ -1,12 +1,127 @@
+// ===================== СПРАВОЧНИКИ (УНИКАЛЬНЫЕ ДАННЫЕ) =====================
+const TEACHERS = [
+  "Буровина М.В.",
+  "Буровина Н.Е.",
+  "Быков М.Ю.",
+  "Галимзянова Л.Р.",
+  "Галушкин А.В.",
+  "Горина Е.Д.",
+  "Гуревич А.В.",
+  "Дьяченко И.В.",
+  "Жиркова О.А.",
+  "Журавлева Н.С.",
+  "Крылова Е.Е.",
+  "Куликов Н.А.",
+  "Кузнецова Е.Е.",
+  "Лапшин А.В.",
+  "Лядова М.Н.",
+  "Лачинов О.Л.",
+  "Макаров А.Е.",
+  "Мальцева С.А.",
+  "Мастеров С.Ю.",
+  "Мещерякова О.Н.",
+  "Сидоров К.М.",
+  "Халезова Т.Б.",
+  "Воронков В.В."
+];
+
+const ROOMS = [
+  "101",
+  "102",
+  "202",
+  "206",
+  "207",
+  "210",
+  "216",
+  "223",
+  "223/224",
+  "224",
+  "301",
+  "302",
+  "306",
+  "307",
+  "401",
+  "402",
+  "405",
+  "407",
+  "дист",
+  "каб. 112",
+  "каб. 207",
+  "каб. 401",
+  "с/зал"
+];
+
+const SUBJECTS = [
+  "Обществознание",
+  "География",
+  "Русский язык",
+  "Физическая культура",
+  "Литература",
+  "Биология",
+  "Математика",
+  "СМИСС",
+  "ТДА",
+  "ТиТЧМС",
+  "Электротехника",
+  "Инженерная графика",
+  "ОППРС",
+  "ИТВПД",
+  "Экономика",
+  "История",
+  "Химия",
+  "Физика",
+  "ОБиЗР",
+  "ОТС",
+  "ТРУП для СсЧПУ",
+  "ТРиТОУиМОАиМ",
+  "Охрана труда",
+  "Материаловедение",
+  "Человеческий фактор",
+  "МиС",
+  "УП для АСУ и И",
+  "Английский язык/Немецкий",
+  "ДиТО",
+  "Консультация по ОТС и СО",
+  "Испытания и доводка",
+  "ТИД на МСсПУ",
+  "ТОА",
+  "ТЭД и ДС",
+  "ОРиУПО",
+  "Консультация по Экономике",
+  "Классный час",
+  "ОТД по ПИДМ",
+  "ТПВ",
+  "ОБП",
+  "Ремонт раб",
+  "БЖД",
+  "ПРИМИ",
+  "Основы философии",
+  "КНП",
+  "ПО и УДПСП",
+  "ДНП и РМиАО",
+  "Компьютерная графика",
+  "Экзамен по Экономике",
+  "Подготовка к экзамену",
+  "РиВУПИДМ",
+  "ПОПД",
+  "СОЗДПМИСС",
+  "Консультация по ОТО и Рем"
+];
+
+// ===================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====================
 const STORAGE_KEY = 'itk37_schedule_v2';
+const DATA_STORAGE_KEY = 'itk37_schedule_data_v2';
 let scheduleData = [];
 let periodStart = '';
 let periodEnd = '';
 let isInitialized = false;
 
+// ===================== ИНИЦИАЛИЗАЦИЯ =====================
 document.addEventListener('DOMContentLoaded', initEditor);
 
 function initEditor() {
+    loadDataFromStorage();
+    populateDropdowns();
     loadFromStorage();
     loadPeriodFromStorage();
     renderTable();
@@ -15,6 +130,125 @@ function initEditor() {
     showNotification('Данные загружены', 'success');
 }
 
+// ===================== РАБОТА СО СПРАВОЧНИКАМИ =====================
+function loadDataFromStorage() {
+    try {
+        const stored = localStorage.getItem(DATA_STORAGE_KEY);
+        if (!stored) return;
+
+        const data = JSON.parse(stored);
+
+        if (Array.isArray(data.teachers)) {
+            TEACHERS.length = 0;
+            data.teachers.forEach(t => TEACHERS.push(t));
+        }
+
+        if (Array.isArray(data.rooms)) {
+            ROOMS.length = 0;
+            data.rooms.forEach(r => ROOMS.push(r));
+        }
+
+        if (Array.isArray(data.subjects)) {
+            SUBJECTS.length = 0;
+            data.subjects.forEach(s => SUBJECTS.push(s));
+        }
+
+        console.log('✅ Справочники загружены из localStorage');
+    } catch (e) {
+        console.error('Ошибка загрузки справочников:', e);
+    }
+}
+
+function saveDataToStorage() {
+    if (!isInitialized) return;
+
+    try {
+        const data = {
+            teachers: TEACHERS,
+            rooms: ROOMS,
+            subjects: SUBJECTS,
+            lastUpdated: new Date().toISOString()
+        };
+        localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(data));
+        console.log('✅ Справочники сохранены');
+    } catch (e) {
+        console.error('Ошибка сохранения справочников:', e);
+        showNotification('Ошибка сохранения справочников', 'error');
+    }
+}
+
+function populateDropdowns() {
+    populateDropdown('teacher', TEACHERS);
+    populateDropdown('room', ROOMS);
+    populateDropdown('subject', SUBJECTS);
+}
+
+function populateDropdown(id, items) {
+    const select = document.getElementById(id);
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Выберите --</option>';
+    items.sort().forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = item;
+        select.appendChild(option);
+    });
+}
+
+// ===================== ДОБАВЛЕНИЕ НОВЫХ ЭЛЕМЕНТОВ =====================
+function addNewTeacher() {
+    const name = prompt('Введите ФИО преподавателя (напр. Иванов А.И.):');
+    if (!name || name.trim() === '') return;
+
+    const cleanName = name.trim();
+
+    if (TEACHERS.includes(cleanName)) {
+        showNotification('Преподаватель уже существует', 'warning');
+        return;
+    }
+
+    TEACHERS.push(cleanName);
+    populateDropdown('teacher', TEACHERS);
+    saveDataToStorage();
+    showNotification('Преподаватель добавлен', 'success');
+}
+
+function addNewRoom() {
+    const room = prompt('Введите номер кабинета (напр. 301 или 223/224):');
+    if (!room || room.trim() === '') return;
+
+    const cleanRoom = room.trim();
+
+    if (ROOMS.includes(cleanRoom)) {
+        showNotification('Кабинет уже существует', 'warning');
+        return;
+    }
+
+    ROOMS.push(cleanRoom);
+    populateDropdown('room', ROOMS);
+    saveDataToStorage();
+    showNotification('Кабинет добавлен', 'success');
+}
+
+function addNewSubject() {
+    const subject = prompt('Введите название предмета:');
+    if (!subject || subject.trim() === '') return;
+
+    const cleanSubject = subject.trim();
+
+    if (SUBJECTS.includes(cleanSubject)) {
+        showNotification('Предмет уже существует', 'warning');
+        return;
+    }
+
+    SUBJECTS.push(cleanSubject);
+    populateDropdown('subject', SUBJECTS);
+    saveDataToStorage();
+    showNotification('Предмет добавлен', 'success');
+}
+
+// ===================== РАБОТА С ХРАНИЛИЩЕМ РАСПИСАНИЯ =====================
 function loadFromStorage() {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -103,6 +337,7 @@ function updatePeriod() {
     showNotification('Период обновлён', 'success');
 }
 
+// ===================== ОТОБРАЖЕНИЕ ДАННЫХ =====================
 function renderTable() {
     const tbody = document.getElementById('scheduleBody');
     const emptyState = document.getElementById('emptyState');
@@ -161,12 +396,17 @@ function updateStorageStatus(message, type) {
     el.style.color = type === 'error' ? '#dc3545' : (type === 'warning' ? '#856404' : '#157347');
 }
 
+// ===================== УПРАВЛЕНИЕ ЗАНЯТИЯМИ =====================
 function openAddModal() {
     document.getElementById('modalTitle').textContent = '➕ Добавить занятие';
     document.getElementById('editIndex').value = '';
     document.getElementById('lessonForm').reset();
-    document.getElementById('teacher').value = 'Не указан';
-    document.getElementById('room').value = '—';
+
+    // Устанавливаем значения по умолчанию
+    document.getElementById('teacher').value = '';
+    document.getElementById('room').value = '';
+    document.getElementById('subject').value = '';
+
     document.getElementById('lessonModal').style.display = 'flex';
 }
 
@@ -195,20 +435,23 @@ function saveLesson(event) {
         day: document.getElementById('day').value.trim(),
         pair: document.getElementById('pair').value.trim(),
         group: document.getElementById('group').value.trim(),
-        subject: document.getElementById('subject').value.trim(),
-        teacher: document.getElementById('teacher').value.trim() || 'Не указан',
-        room: document.getElementById('room').value.trim() || '—'
+        subject: document.getElementById('subject').value,
+        teacher: document.getElementById('teacher').value || 'Не указан',
+        room: document.getElementById('room').value || '—'
     };
 
-    if (!lesson.group || !lesson.subject) {
-        showNotification('Заполните обязательные поля: Группа и Предмет', 'error');
+    // Валидация
+    if (!lesson.group || !lesson.subject || !lesson.teacher || !lesson.room) {
+        showNotification('Заполните все обязательные поля', 'error');
         return;
     }
 
     if (index === '') {
+        // Добавление
         scheduleData.push(lesson);
         showNotification('Занятие добавлено', 'success');
     } else {
+        // Редактирование
         scheduleData[parseInt(index)] = lesson;
         showNotification('Занятие обновлено', 'success');
     }
@@ -227,6 +470,7 @@ function deleteLesson(index) {
     showNotification('Занятие удалено', 'success');
 }
 
+// ===================== ИМПОРТ / ЭКСПОРТ =====================
 function handleExcelImport(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -403,6 +647,7 @@ function clearStorage() {
     if (!confirm('⚠️ ВНИМАНИЕ! Все данные будут УДАЛЕНЫ безвозвратно. Продолжить?')) return;
 
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(DATA_STORAGE_KEY);
     scheduleData = [];
     periodStart = '';
     periodEnd = '';
@@ -414,6 +659,7 @@ function clearStorage() {
     showNotification('Данные удалены из localStorage', 'success');
 }
 
+// ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
 function formatDateForDisplay(dateStr) {
     const [y, m, d] = dateStr.split('-');
     return `${d}.${m}.${y}`;
@@ -429,10 +675,12 @@ function showNotification(message, type) {
     }, 3500);
 }
 
+// Закрытие модалки по клику вне контента
 document.getElementById('lessonModal').addEventListener('click', (e) => {
     if (e.target.id === 'lessonModal') closeModal();
 });
 
+// Горячие клавиши
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && document.getElementById('lessonModal').style.display === 'flex') {
         closeModal();
