@@ -4,29 +4,141 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Расписание ITK37</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; padding: 10px; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #0056b3; }
-        #dateHeader { text-align: center; color: #007cba; font-weight: bold; }
-        .tabs { display: flex; margin: 20px 0; }
-        .tab { flex: 1; text-align: center; padding: 12px; background: #eee; cursor: pointer; border: 1px solid #ccc; transition: background 0.3s, color 0.3s; }
-        .tab.active { background: #007cba; color: white; font-weight: bold; }
-        .tab:first-child { border-radius: 6px 0 0 6px; }
-        .tab:last-child { border-radius: 0 6px 6px 0; }
-        .controls { margin: 20px 0; }
-        select { width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; margin-top: 10px; background-color: #007cba; color: white; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.3s; }
-        button:hover { background-color: #0056b3; }
-        #schedule { margin-top: 25px; display: none; }
-        .header { background: #007cba; color: white; padding: 10px 15px; border-radius: 8px; }
-        .day { margin-top: 20px; padding-left: 15px; border-left: 4px solid #007cba; background: #fdfdfd; }
-        .day h3 { margin-top: 0; padding-top: 10px; }
-        .lesson { background: white; padding: 10px; margin: 5px 0; border: 1px solid #eee; border-radius: 4px; }
-        .time { font-weight: bold; color: #007cba; }
-        .empty { text-align: center; color: #888; font-style: italic; padding: 20px; }
-        .footer { text-align: center; margin-top: 30px; color: #777; font-size: 0.9em; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #f5f7fa; 
+            color: #333; 
+            line-height: 1.6; 
+            padding: 10px; 
+        }
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
+        h1 { 
+            text-align: center; 
+            color: #0056b3; 
+        }
+        #dateHeader { 
+            text-align: center; 
+            color: #007cba; 
+            font-weight: bold; 
+            margin-bottom: 15px;
+        }
+        .tabs { 
+            display: flex; 
+            margin: 20px 0; 
+        }
+        .tab { 
+            flex: 1; 
+            text-align: center; 
+            padding: 12px; 
+            background: #eee; 
+            cursor: pointer; 
+            border: 1px solid #ccc; 
+            transition: background 0.3s, color 0.3s; 
+        }
+        .tab.active { 
+            background: #007cba; 
+            color: white; 
+            font-weight: bold; 
+        }
+        .tab:first-child { 
+            border-radius: 6px 0 0 6px; 
+        }
+        .tab:last-child { 
+            border-radius: 0 6px 6px 0; 
+        }
+        .controls { 
+            margin: 20px 0; 
+        }
+        select { 
+            width: 100%; 
+            padding: 10px; 
+            font-size: 16px; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+        }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            margin-top: 10px; 
+            background-color: #007cba; 
+            color: white; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: background-color 0.3s; 
+        }
+        button:hover { 
+            background-color: #0056b3; 
+        }
+        #schedule { 
+            margin-top: 25px; 
+            display: none; 
+        }
+        .header { 
+            background: #007cba; 
+            color: white; 
+            padding: 10px 15px; 
+            border-radius: 8px; 
+        }
+        .day { 
+            margin-top: 20px; 
+            padding-left: 15px; 
+            border-left: 4px solid #007cba; 
+            background: #fdfdfd; 
+        }
+        .day h3 { 
+            margin-top: 0; 
+            padding-top: 10px; 
+        }
+        .lesson { 
+            background: white; 
+            padding: 10px; 
+            margin: 5px 0; 
+            border: 1px solid #eee; 
+            border-radius: 4px; 
+        }
+        .time { 
+            font-weight: bold; 
+            color: #007cba; 
+        }
+        .empty { 
+            text-align: center; 
+            color: #888; 
+            font-style: italic; 
+            padding: 20px; 
+        }
+        .footer { 
+            text-align: center; 
+            margin-top: 30px; 
+            color: #777; 
+            font-size: 0.9em; 
+        }
+        .admin-link {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        .admin-link a {
+            color: #0056b3;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .admin-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -60,6 +172,14 @@
                 <h2 id="resultTitle">Расписание</h2>
             </div>
             <div id="scheduleContent"></div>
+        </div>
+
+        <div class="admin-link">
+            <p>🛠️ <a href="editor.html" target="_blank">Открыть редактор расписания</a></p>
+        </div>
+
+        <div class="footer">
+            <p>Расписание ITK №37 • Данные обновляются через редактор</p>
         </div>
     </div>
     <script src="script.js"></script>
