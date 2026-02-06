@@ -178,7 +178,7 @@
             padding-top: 15px; border-top: 1px solid #eee;
             font-size: 0.9rem;
         }
-
+        
         /* Стили для кнопок добавления */
         .btn-add {
             width: 40px;
@@ -210,7 +210,7 @@
             flex: 1;
             min-width: 0;
         }
-
+        
         /* Стили для фильтров */
         .filter-bar {
             background: #f8f9fa;
@@ -247,13 +247,48 @@
             padding: 8px 16px;
             font-size: 14px;
         }
-
+        
+        /* Стили для управления неделями */
+        .week-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: #fff3cd;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffc107;
+        }
+        .week-btn {
+            padding: 8px 16px;
+            background: #ffc107;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .week-btn:hover {
+            background: #e0a800;
+            transform: scale(1.05);
+        }
+        .week-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .week-label {
+            font-weight: 600;
+            color: #856404;
+        }
+        
         @media (max-width: 768px) {
             .toolbar { flex-direction: column; align-items: stretch; }
             .period-controls { flex-direction: column; align-items: flex-start; }
             .form-grid { grid-template-columns: 1fr; }
             .btn { width: 100%; justify-content: center; }
             .filter-row { grid-template-columns: 1fr; }
+            .week-controls { flex-direction: column; align-items: flex-start; }
         }
     </style>
 </head>
@@ -274,6 +309,20 @@
             </button>
         </div>
 
+        <div class="week-controls">
+            <span class="week-label">Текущая неделя:</span>
+            <button class="week-btn" onclick="changeWeek(Math.max(1, currentWeek - 1))" title="Предыдущая неделя">
+                ◀️
+            </button>
+            <strong id="currentWeek">1</strong>
+            <button class="week-btn" onclick="changeWeek(currentWeek + 1)" title="Следующая неделя">
+                ▶️
+            </button>
+            <span style="color: #856404; font-size: 0.9rem; margin-left: 20px;">
+                💡 Занятия добавляются для текущей недели. Переключайтесь для редактирования разных недель.
+            </span>
+        </div>
+
         <div class="toolbar">
             <div class="main-actions">
                 <button class="btn btn-primary" onclick="openAddModal()">
@@ -285,13 +334,16 @@
                 <button class="btn btn-warning" onclick="checkSchedule()">
                     <span>🔍 Проверить расписание</span>
                 </button>
-                <button class="btn btn-outline" onclick="exportToJSON()">
-                    <span>📤 Резервная копия</span>
-                </button>
             </div>
-            <div>
-                <button class="btn btn-outline" onclick="document.getElementById('jsonImport').click()">
-                    <span>📥 Импорт JSON</span>
+            <div class="main-actions">
+                <button class="btn btn-outline" onclick="document.getElementById('excelImport').click()">
+                    <span>📥 Импорт из Excel</span>
+                </button>
+                <button class="btn btn-outline" onclick="exportToExcel()">
+                    <span>📤 Экспорт в Excel</span>
+                </button>
+                <button class="btn btn-outline" onclick="exportToJSON()">
+                    <span>🗄️ Резервная копия</span>
                 </button>
             </div>
         </div>
@@ -344,6 +396,16 @@
                     <label for="filterRoom">Кабинет</label>
                     <input type="text" id="filterRoom" placeholder="Поиск..." oninput="filterTable()">
                 </div>
+                <div class="filter-group">
+                    <label for="filterWeek">Неделя</label>
+                    <select id="filterWeek" onchange="filterTable()">
+                        <option value="">Все недели</option>
+                        <option value="1">Неделя 1</option>
+                        <option value="2">Неделя 2</option>
+                        <option value="3">Неделя 3</option>
+                        <option value="4">Неделя 4</option>
+                    </select>
+                </div>
             </div>
             <div class="filter-actions">
                 <button class="btn btn-outline btn-filter" onclick="document.querySelector('.filter-bar').reset(); filterTable()">
@@ -362,6 +424,7 @@
                         <th onclick="sortTable(3)">Предмет</th>
                         <th onclick="sortTable(4)">Преподаватель</th>
                         <th onclick="sortTable(5)">Аудитория</th>
+                        <th onclick="sortTable(6)">Неделя</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -372,7 +435,7 @@
         <div id="emptyState" class="empty-state">
             <div style="font-size: 4rem; margin-bottom: 15px">📋</div>
             <h3>Расписание пустое</h3>
-            <p>Добавьте первое занятие или импортируйте данные</p>
+            <p>Добавьте первое занятие или импортируйте данные из Excel</p>
         </div>
 
         <footer>
@@ -405,7 +468,7 @@
                             <option value="Суббота">Суббота</option>
                         </select>
                     </div>
-
+                    
                     <!-- Пара -->
                     <div class="form-group">
                         <label for="pair">Пара *</label>
@@ -417,13 +480,13 @@
                             <option value="9-10 урок">9-10 урок</option>
                         </select>
                     </div>
-
+                    
                     <!-- Группа -->
                     <div class="form-group">
                         <label for="group">Группа *</label>
                         <input type="text" id="group" placeholder="напр. ИС-23" required>
                     </div>
-
+                    
                     <!-- Предмет с кнопкой добавления -->
                     <div class="form-group">
                         <label for="subject">Предмет *</label>
@@ -436,7 +499,7 @@
                             </button>
                         </div>
                     </div>
-
+                    
                     <!-- Преподаватель с кнопкой добавления -->
                     <div class="form-group">
                         <label for="teacher">Преподаватель *</label>
@@ -449,7 +512,7 @@
                             </button>
                         </div>
                     </div>
-
+                    
                     <!-- Аудитория с кнопкой добавления -->
                     <div class="form-group">
                         <label for="room">Аудитория *</label>
@@ -462,6 +525,17 @@
                             </button>
                         </div>
                     </div>
+                    
+                    <!-- Неделя -->
+                    <div class="form-group">
+                        <label for="week">Неделя *</label>
+                        <select id="week" required>
+                            <option value="1">Неделя 1</option>
+                            <option value="2">Неделя 2</option>
+                            <option value="3">Неделя 3</option>
+                            <option value="4">Неделя 4</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline" onclick="closeModal()">Отмена</button>
@@ -473,6 +547,12 @@
                 <h3 style="margin: 25px 0 15px; color: var(--primary-dark); border-bottom: 1px solid #eee; padding-bottom: 8px">
                     Импорт данных
                 </h3>
+                <div class="file-drop" onclick="document.getElementById('excelImport').click()">
+                    <div style="font-size: 3rem">📊</div>
+                    <p><strong>Импорт из Excel (.xls/.xlsx)</strong><br>
+                    Перетащите файл сюда или кликните для выбора</p>
+                    <input type="file" id="excelImport" accept=".xls,.xlsx" style="display:none" onchange="handleExcelImport(event)">
+                </div>
                 <div class="file-drop" onclick="document.getElementById('jsonImport').click()" style="margin-top: 15px">
                     <div style="font-size: 3rem">🗄️</div>
                     <p><strong>Импорт из JSON</strong><br>
