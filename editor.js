@@ -1,186 +1,102 @@
-// ===================== СПРАВОЧНИКИ (УНИКАЛЬНЫЕ ДАННЫЕ) =====================
-const TEACHERS = [
-  "Буровина М.В.",
-  "Буровина Н.Е.",
-  "Быков М.Ю.",
-  "Галимзянова Л.Р.",
-  "Галушкин А.В.",
-  "Горина Е.Д.",
-  "Гуревич А.В.",
-  "Дьяченко И.В.",
-  "Жиркова О.А.",
-  "Журавлева Н.С.",
-  "Крылова Е.Е.",
-  "Куликов Н.А.",
-  "Кузнецова Е.Е.",
-  "Лапшин А.В.",
-  "Лядова М.Н.",
-  "Лачинов О.Л.",
-  "Макаров А.Е.",
-  "Мальцева С.А.",
-  "Мастеров С.Ю.",
-  "Мещерякова О.Н.",
-  "Сидоров К.М.",
-  "Халезова Т.Б.",
-  "Воронков В.В."
-];
-
-const ROOMS = [
-  "101",
-  "102",
-  "202",
-  "206",
-  "207",
-  "210",
-  "216",
-  "223",
-  "223/224",
-  "224",
-  "301",
-  "302",
-  "306",
-  "307",
-  "401",
-  "402",
-  "405",
-  "407",
-  "дист",
-  "каб. 112",
-  "каб. 207",
-  "каб. 401",
-  "с/зал"
-];
-
-const SUBJECTS = [
-  "Обществознание",
-  "География",
-  "Русский язык",
-  "Физическая культура",
-  "Литература",
-  "Биология",
-  "Математика",
-  "СМИСС",
-  "ТДА",
-  "ТиТЧМС",
-  "Электротехника",
-  "Инженерная графика",
-  "ОППРС",
-  "ИТВПД",
-  "Экономика",
-  "История",
-  "Химия",
-  "Физика",
-  "ОБиЗР",
-  "ОТС",
-  "ТРУП для СсЧПУ",
-  "ТРиТОУиМОАиМ",
-  "Охрана труда",
-  "Материаловедение",
-  "Человеческий фактор",
-  "МиС",
-  "УП для АСУ и И",
-  "Английский язык/Немецкий",
-  "ДиТО",
-  "Консультация по ОТС и СО",
-  "Испытания и доводка",
-  "ТИД на МСсПУ",
-  "ТОА",
-  "ТЭД и ДС",
-  "ОРиУПО",
-  "Консультация по Экономике",
-  "Классный час",
-  "ОТД по ПИДМ",
-  "ТПВ",
-  "ОБП",
-  "Ремонт раб",
-  "БЖД",
-  "ПРИМИ",
-  "Основы философии",
-  "КНП",
-  "ПО и УДПСП",
-  "ДНП и РМиАО",
-  "Компьютерная графика",
-  "Экзамен по Экономике",
-  "Подготовка к экзамену",
-  "РиВУПИДМ",
-  "ПОПД",
-  "СОЗДПМИСС",
-  "Консультация по ОТО и Рем"
-];
-
 // ===================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====================
-const STORAGE_KEY = 'itk37_schedule_v2';
-const DATA_STORAGE_KEY = 'itk37_schedule_data_v2';
+const DATA_FILE = 'data.json';
 let scheduleData = [];
-let periodStart = '';
-let periodEnd = '';
+let period = { start: '', end: '' };
+let teachers = [];
+let rooms = [];
+let subjects = [];
 let isInitialized = false;
+let filteredData = [];
 
 // ===================== ИНИЦИАЛИЗАЦИЯ =====================
 document.addEventListener('DOMContentLoaded', initEditor);
 
-function initEditor() {
-    loadDataFromStorage();
-    populateDropdowns();
-    loadFromStorage();
-    loadPeriodFromStorage();
-    renderTable();
-    updateStatusBar();
-    isInitialized = true;
-    showNotification('Данные загружены', 'success');
+async function initEditor() {
+    try {
+        await loadData();
+        populateDropdowns();
+        renderTable();
+        updateStatusBar();
+        isInitialized = true;
+        showNotification('Данные загружены', 'success');
+    } catch (error) {
+        console.error('Ошибка инициализации:', error);
+        showNotification(`Ошибка загрузки: ${error.message}`, 'error');
+    }
+}
+
+// ===================== ЗАГРУЗКА ДАННЫХ ИЗ ФАЙЛА =====================
+async function loadData() {
+    try {
+        const response = await fetch(DATA_FILE + '?t=' + Date.now());
+        if (!response.ok) {
+            throw new Error(`Не удалось загрузить ${DATA_FILE}. Убедитесь, что файл существует.`);
+        }
+
+        const data = await response.json();
+
+        // Загружаем расписание
+        scheduleData = data.schedule || [];
+        filteredData = [...scheduleData];
+
+        // Загружаем период
+        if (data.period) {
+            period.start = data.period.start || '';
+            period.end = data.period.end || '';
+            document.getElementById('periodStart').value = period.start;
+            document.getElementById('periodEnd').value = period.end;
+        }
+
+        // Загружаем справочники
+        if (Array.isArray(data.teachers)) teachers = data.teachers;
+        if (Array.isArray(data.rooms)) rooms = data.rooms;
+        if (Array.isArray(data.subjects)) subjects = data.subjects;
+
+        console.log(`✅ Загружено ${scheduleData.length} занятий`);
+    } catch (error) {
+        console.error('Ошибка загрузки данных:', error);
+        throw error;
+    }
+}
+
+// ===================== СОХРАНЕНИЕ ДАННЫХ =====================
+function saveData() {
+    if (!isInitialized) return;
+
+    const data = {
+        period: {
+            start: period.start,
+            end: period.end
+        },
+        schedule: scheduleData,
+        teachers: teachers,
+        rooms: rooms,
+        subjects: subjects,
+        lastUpdated: new Date().toISOString(),
+        version: '2.0'
+    };
+
+    // Создаём файл для скачивания
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'data.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 0);
+
+    showNotification('Файл сохранён! Закоммитьте его в репозиторий.', 'success');
 }
 
 // ===================== РАБОТА СО СПРАВОЧНИКАМИ =====================
-function loadDataFromStorage() {
-    try {
-        const stored = localStorage.getItem(DATA_STORAGE_KEY);
-        if (!stored) return;
-
-        const data = JSON.parse(stored);
-
-        if (Array.isArray(data.teachers)) {
-            TEACHERS.length = 0;
-            data.teachers.forEach(t => TEACHERS.push(t));
-        }
-
-        if (Array.isArray(data.rooms)) {
-            ROOMS.length = 0;
-            data.rooms.forEach(r => ROOMS.push(r));
-        }
-
-        if (Array.isArray(data.subjects)) {
-            SUBJECTS.length = 0;
-            data.subjects.forEach(s => SUBJECTS.push(s));
-        }
-
-        console.log('✅ Справочники загружены из localStorage');
-    } catch (e) {
-        console.error('Ошибка загрузки справочников:', e);
-    }
-}
-
-function saveDataToStorage() {
-    if (!isInitialized) return;
-
-    try {
-        const data = {
-            teachers: TEACHERS,
-            rooms: ROOMS,
-            subjects: SUBJECTS,
-            lastUpdated: new Date().toISOString()
-        };
-        localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(data));
-        console.log('✅ Справочники сохранены');
-    } catch (e) {
-        console.error('Ошибка сохранения справочников:', e);
-        showNotification('Ошибка сохранения справочников', 'error');
-    }
-}
-
 function populateDropdowns() {
-    populateDropdown('teacher', TEACHERS);
-    populateDropdown('room', ROOMS);
-    populateDropdown('subject', SUBJECTS);
+    populateDropdown('teacher', teachers);
+    populateDropdown('room', rooms);
+    populateDropdown('subject', subjects);
 }
 
 function populateDropdown(id, items) {
@@ -203,15 +119,14 @@ function addNewTeacher() {
 
     const cleanName = name.trim();
 
-    if (TEACHERS.includes(cleanName)) {
+    if (teachers.includes(cleanName)) {
         showNotification('Преподаватель уже существует', 'warning');
         return;
     }
 
-    TEACHERS.push(cleanName);
-    populateDropdown('teacher', TEACHERS);
-    saveDataToStorage();
-    showNotification('Преподаватель добавлен', 'success');
+    teachers.push(cleanName);
+    populateDropdown('teacher', teachers);
+    showNotification('Преподаватель добавлен (сохраните файл)', 'success');
 }
 
 function addNewRoom() {
@@ -220,15 +135,14 @@ function addNewRoom() {
 
     const cleanRoom = room.trim();
 
-    if (ROOMS.includes(cleanRoom)) {
+    if (rooms.includes(cleanRoom)) {
         showNotification('Кабинет уже существует', 'warning');
         return;
     }
 
-    ROOMS.push(cleanRoom);
-    populateDropdown('room', ROOMS);
-    saveDataToStorage();
-    showNotification('Кабинет добавлен', 'success');
+    rooms.push(cleanRoom);
+    populateDropdown('room', rooms);
+    showNotification('Кабинет добавлен (сохраните файл)', 'success');
 }
 
 function addNewSubject() {
@@ -237,86 +151,17 @@ function addNewSubject() {
 
     const cleanSubject = subject.trim();
 
-    if (SUBJECTS.includes(cleanSubject)) {
+    if (subjects.includes(cleanSubject)) {
         showNotification('Предмет уже существует', 'warning');
         return;
     }
 
-    SUBJECTS.push(cleanSubject);
-    populateDropdown('subject', SUBJECTS);
-    saveDataToStorage();
-    showNotification('Предмет добавлен', 'success');
+    subjects.push(cleanSubject);
+    populateDropdown('subject', subjects);
+    showNotification('Предмет добавлен (сохраните файл)', 'success');
 }
 
-// ===================== РАБОТА С ХРАНИЛИЩЕМ РАСПИСАНИЯ =====================
-function loadFromStorage() {
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (!stored) {
-            scheduleData = [];
-            updateStorageStatus('⚠️ Данные отсутствуют (импортируйте из Excel или добавьте вручную)', 'warning');
-            return;
-        }
-
-        const data = JSON.parse(stored);
-        if (!data?.schedule || !Array.isArray(data.schedule)) throw new Error('Некорректная структура');
-
-        scheduleData = data.schedule;
-        updateStorageStatus(`✅ Загружено ${scheduleData.length} занятий от ${new Date(data.lastUpdated).toLocaleString('ru-RU')}`, 'success');
-    } catch (e) {
-        console.error('Ошибка загрузки:', e);
-        scheduleData = [];
-        updateStorageStatus(`❌ Ошибка данных: ${e.message}. Данные сброшены.`, 'error');
-        localStorage.removeItem(STORAGE_KEY);
-    }
-}
-
-function saveToStorage() {
-    if (!isInitialized) return;
-
-    try {
-        const periodStr = periodStart && periodEnd
-            ? `Период: ${formatDateForDisplay(periodStart)} – ${formatDateForDisplay(periodEnd)}`
-            : 'Период не задан';
-
-        const data = {
-            period: periodStr,
-            schedule: scheduleData,
-            lastUpdated: new Date().toISOString(),
-            source: 'editor',
-            version: '2.0'
-        };
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        updateStorageStatus(`✅ Сохранено ${scheduleData.length} занятий (${new Date().toLocaleTimeString()})`, 'success');
-        updateStatusBar();
-    } catch (e) {
-        console.error('Ошибка сохранения:', e);
-        showNotification(`Ошибка сохранения: ${e.message}`, 'error');
-        updateStorageStatus('❌ Ошибка записи в localStorage', 'error');
-    }
-}
-
-function loadPeriodFromStorage() {
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (!stored) return;
-
-        const data = JSON.parse(stored);
-        if (!data?.period) return;
-
-        const match = data.period.match(/(\d{2})\.(\d{2})\.(\d{4})\s*–\s*(\d{2})\.(\d{2})\.(\d{4})/);
-        if (match) {
-            periodStart = `${match[3]}-${match[2]}-${match[1]}`;
-            periodEnd = `${match[6]}-${match[5]}-${match[4]}`;
-            document.getElementById('periodStart').value = periodStart;
-            document.getElementById('periodEnd').value = periodEnd;
-        }
-    } catch (e) {
-        console.warn('Не удалось загрузить период:', e);
-    }
-}
-
+// ===================== ОБНОВЛЕНИЕ ПЕРИОДА =====================
 function updatePeriod() {
     const startInput = document.getElementById('periodStart').value;
     const endInput = document.getElementById('periodEnd').value;
@@ -331,69 +176,213 @@ function updatePeriod() {
         return;
     }
 
-    periodStart = startInput;
-    periodEnd = endInput;
-    saveToStorage();
-    showNotification('Период обновлён', 'success');
+    period.start = startInput;
+    period.end = endInput;
+    showNotification('Период обновлён (сохраните файл)', 'success');
+}
+
+// ===================== СОРТИРОВКА И ФИЛЬТРАЦИЯ =====================
+function sortTable(column) {
+    const tbody = document.getElementById('scheduleBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    // Определяем направление сортировки
+    const sortState = tbody.dataset.sortState || '{}';
+    const state = JSON.parse(sortState);
+    const direction = state[column] === 'asc' ? 'desc' : 'asc';
+    state[column] = direction;
+    tbody.dataset.sortState = JSON.stringify(state);
+
+    // Сортируем
+    rows.sort((a, b) => {
+        const aValue = a.cells[column].textContent.trim();
+        const bValue = b.cells[column].textContent.trim();
+
+        if (column === 1) { // Сортировка по паре (1-2 урок, 3-4 урок...)
+            const aNum = parseInt(aValue) || 0;
+            const bNum = parseInt(bValue) || 0;
+            return direction === 'asc' ? aNum - bNum : bNum - aNum;
+        }
+
+        return direction === 'asc'
+            ? aValue.localeCompare(bValue, 'ru')
+            : bValue.localeCompare(aValue, 'ru');
+    });
+
+    // Перерисовываем таблицу
+    rows.forEach(row => tbody.appendChild(row));
+
+    // Обновляем индикаторы сортировки
+    updateSortIndicators(column, direction);
+}
+
+function updateSortIndicators(column, direction) {
+    const headers = document.querySelectorAll('#scheduleTable th');
+    headers.forEach((th, index) => {
+        th.textContent = th.textContent.replace(' ▲', '').replace(' ▼', '');
+        if (index === column) {
+            th.textContent += direction === 'asc' ? ' ▲' : ' ▼';
+        }
+    });
+}
+
+function filterTable() {
+    const filters = {
+        day: document.getElementById('filterDay').value,
+        group: document.getElementById('filterGroup').value.toLowerCase(),
+        subject: document.getElementById('filterSubject').value.toLowerCase(),
+        teacher: document.getElementById('filterTeacher').value.toLowerCase(),
+        room: document.getElementById('filterRoom').value.toLowerCase()
+    };
+
+    filteredData = scheduleData.filter(lesson => {
+        if (filters.day && lesson.day !== filters.day) return false;
+        if (filters.group && !lesson.group.toLowerCase().includes(filters.group)) return false;
+        if (filters.subject && !lesson.subject.toLowerCase().includes(filters.subject)) return false;
+        if (filters.teacher && !lesson.teacher.toLowerCase().includes(filters.teacher)) return false;
+        if (filters.room && !lesson.room.toLowerCase().includes(filters.room)) return false;
+        return true;
+    });
+
+    renderTable();
+    updateStatusBar();
 }
 
 // ===================== ОТОБРАЖЕНИЕ ДАННЫХ =====================
 function renderTable() {
     const tbody = document.getElementById('scheduleBody');
     const emptyState = document.getElementById('emptyState');
+    const dataToShow = filteredData.length > 0 ? filteredData : scheduleData;
 
-    if (scheduleData.length === 0) {
+    if (dataToShow.length === 0) {
         tbody.innerHTML = '';
         emptyState.style.display = 'block';
         return;
     }
 
     emptyState.style.display = 'none';
-    tbody.innerHTML = scheduleData.map((lesson, index) => `
-        <tr data-index="${index}">
-            <td>${lesson.day}</td>
-            <td>${lesson.pair}</td>
-            <td><strong>${lesson.group}</strong></td>
-            <td>${lesson.subject}</td>
-            <td>${lesson.teacher === 'Не указан' ? '<em>не указан</em>' : lesson.teacher}</td>
-            <td>${lesson.room}</td>
-            <td class="action-cell">
-                <button class="btn-table btn-edit" title="Редактировать" onclick="openEditModal(${index})">
-                    ✏️
-                </button>
-                <button class="btn-table btn-delete" title="Удалить" onclick="deleteLesson(${index})">
-                    🗑️
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = dataToShow.map((lesson, index) => {
+        const originalIndex = scheduleData.findIndex(l =>
+            l.day === lesson.day &&
+            l.pair === lesson.pair &&
+            l.group === lesson.group &&
+            l.subject === lesson.subject
+        );
+
+        return `
+            <tr data-index="${originalIndex}">
+                <td>${lesson.day}</td>
+                <td>${lesson.pair}</td>
+                <td><strong>${lesson.group}</strong></td>
+                <td>${lesson.subject}</td>
+                <td>${lesson.teacher === 'Не указан' ? '<em>не указан</em>' : lesson.teacher}</td>
+                <td>${lesson.room}</td>
+                <td class="action-cell">
+                    <button class="btn-table btn-edit" title="Редактировать" onclick="openEditModal(${originalIndex})">
+                        ✏️
+                    </button>
+                    <button class="btn-table btn-delete" title="Удалить" onclick="deleteLesson(${originalIndex})">
+                        🗑️
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 function updateStatusBar() {
     document.getElementById('lessonsCount').textContent = scheduleData.length;
+    document.getElementById('filteredCount').textContent = filteredData.length;
 
     const groups = new Set(scheduleData.map(l => l.group));
     document.getElementById('groupsCount').textContent = groups.size;
 
-    const teachers = new Set(scheduleData.map(l => l.teacher).filter(t => t !== 'Не указан'));
-    document.getElementById('teachersCount').textContent = teachers.size;
+    const teachersSet = new Set(scheduleData.map(l => l.teacher).filter(t => t !== 'Не указан'));
+    document.getElementById('teachersCount').textContent = teachersSet.size;
 
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-        try {
-            const data = JSON.parse(stored);
-            document.getElementById('lastUpdated').textContent =
-                new Date(data.lastUpdated).toLocaleString('ru-RU');
-        } catch (e) {
-            document.getElementById('lastUpdated').textContent = 'Ошибка даты';
-        }
-    }
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleString('ru-RU');
 }
 
-function updateStorageStatus(message, type) {
-    const el = document.getElementById('storageStatus').querySelector('span');
-    el.textContent = message;
-    el.style.color = type === 'error' ? '#dc3545' : (type === 'warning' ? '#856404' : '#157347');
+// ===================== ВАЛИДАЦИЯ КОНФЛИКТОВ =====================
+function validateConflicts(newLesson, excludeIndex = -1) {
+    const conflicts = [];
+
+    scheduleData.forEach((lesson, index) => {
+        if (index === excludeIndex) return;
+
+        // Конфликт по кабинету и времени
+        if (lesson.day === newLesson.day &&
+            lesson.pair === newLesson.pair &&
+            lesson.room === newLesson.room &&
+            lesson.room !== '—' && lesson.room !== 'дист') {
+            conflicts.push({
+                type: 'room',
+                message: `Конфликт: кабинет ${lesson.room} занят парой "${lesson.subject}" группы ${lesson.group}`
+            });
+        }
+
+        // Конфликт по преподавателю и времени
+        if (lesson.day === newLesson.day &&
+            lesson.pair === newLesson.pair &&
+            lesson.teacher === newLesson.teacher &&
+            lesson.teacher !== 'Не указан') {
+            conflicts.push({
+                type: 'teacher',
+                message: `Конфликт: преподаватель ${lesson.teacher} занят парой "${lesson.subject}" группы ${lesson.group}`
+            });
+        }
+
+        // Конфликт по группе и времени
+        if (lesson.day === newLesson.day &&
+            lesson.pair === newLesson.pair &&
+            lesson.group === newLesson.group) {
+            conflicts.push({
+                type: 'group',
+                message: `Конфликт: группа ${lesson.group} уже имеет пару "${lesson.subject}" в это время`
+            });
+        }
+    });
+
+    return conflicts;
+}
+
+function checkScheduleOrder() {
+    const issues = [];
+
+    // Группируем по дню и группе
+    const grouped = {};
+    scheduleData.forEach((lesson, index) => {
+        const key = `${lesson.day}_${lesson.group}`;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push({ ...lesson, index });
+    });
+
+    // Проверяем порядок пар
+    Object.values(grouped).forEach(lessons => {
+        lessons.sort((a, b) => {
+            const aNum = parseInt(a.pair) || 0;
+            const bNum = parseInt(b.pair) || 0;
+            return aNum - bNum;
+        });
+
+        for (let i = 0; i < lessons.length - 1; i++) {
+            const current = lessons[i];
+            const next = lessons[i + 1];
+
+            const currentNum = parseInt(current.pair) || 0;
+            const nextNum = parseInt(next.pair) || 0;
+
+            if (currentNum > nextNum) {
+                issues.push({
+                    type: 'order',
+                    message: `Нарушение порядка: ${current.group}, ${current.day} - ${current.pair} после ${next.pair}`,
+                    index: current.index
+                });
+            }
+        }
+    });
+
+    return issues;
 }
 
 // ===================== УПРАВЛЕНИЕ ЗАНЯТИЯМИ =====================
@@ -402,7 +391,6 @@ function openAddModal() {
     document.getElementById('editIndex').value = '';
     document.getElementById('lessonForm').reset();
 
-    // Устанавливаем значения по умолчанию
     document.getElementById('teacher').value = '';
     document.getElementById('room').value = '';
     document.getElementById('subject').value = '';
@@ -440,23 +428,31 @@ function saveLesson(event) {
         room: document.getElementById('room').value || '—'
     };
 
-    // Валидация
+    // Валидация обязательных полей
     if (!lesson.group || !lesson.subject || !lesson.teacher || !lesson.room) {
         showNotification('Заполните все обязательные поля', 'error');
         return;
     }
 
+    // Проверка конфликтов
+    const conflicts = validateConflicts(lesson, index === '' ? -1 : parseInt(index));
+    if (conflicts.length > 0) {
+        const messages = conflicts.map(c => c.message).join('\n');
+        if (!confirm(`Обнаружены конфликты:\n${messages}\n\nПродолжить сохранение?`)) {
+            return;
+        }
+    }
+
     if (index === '') {
         // Добавление
         scheduleData.push(lesson);
-        showNotification('Занятие добавлено', 'success');
+        showNotification('Занятие добавлено (сохраните файл)', 'success');
     } else {
         // Редактирование
         scheduleData[parseInt(index)] = lesson;
-        showNotification('Занятие обновлено', 'success');
+        showNotification('Занятие обновлено (сохраните файл)', 'success');
     }
 
-    saveToStorage();
     renderTable();
     closeModal();
 }
@@ -465,113 +461,84 @@ function deleteLesson(index) {
     if (!confirm(`Удалить занятие "${scheduleData[index].subject}" для группы ${scheduleData[index].group}?`)) return;
 
     scheduleData.splice(index, 1);
-    saveToStorage();
     renderTable();
-    showNotification('Занятие удалено', 'success');
+    showNotification('Занятие удалено (сохраните файл)', 'success');
 }
 
-// ===================== ИМПОРТ / ЭКСПОРТ =====================
-function handleExcelImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+// ===================== ПРОВЕРКА РАСПИСАНИЯ =====================
+function checkSchedule() {
+    const issues = checkScheduleOrder();
+    const conflicts = [];
 
-    showNotification('Начинаю импорт из Excel...', 'success');
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-
-            const parsed = parseExcelData(jsonData);
-
-            if (parsed.schedule.length === 0) {
-                throw new Error('Не удалось извлечь занятия из файла');
-            }
-
-            if (parsed.periodStart && parsed.periodEnd) {
-                periodStart = parsed.periodStart;
-                periodEnd = parsed.periodEnd;
-                document.getElementById('periodStart').value = periodStart;
-                document.getElementById('periodEnd').value = periodEnd;
-            }
-
-            scheduleData = parsed.schedule;
-            saveToStorage();
-            renderTable();
-            showNotification(`✅ Импортировано ${scheduleData.length} занятий из Excel!`, 'success');
-        } catch (error) {
-            console.error('Ошибка импорта Excel:', error);
-            showNotification(`Ошибка импорта: ${error.message}`, 'error');
-        } finally {
-            event.target.value = '';
+    scheduleData.forEach((lesson, index) => {
+        const lessonConflicts = validateConflicts(lesson, index);
+        if (lessonConflicts.length > 0) {
+            conflicts.push({
+                lesson: lesson,
+                conflicts: lessonConflicts
+            });
         }
+    });
+
+    if (issues.length === 0 && conflicts.length === 0) {
+        showNotification('✅ Расписание в порядке! Нет конфликтов и нарушений порядка.', 'success');
+        return;
+    }
+
+    let message = '⚠️ Обнаружены проблемы:\n\n';
+
+    if (issues.length > 0) {
+        message += `Нарушения порядка (${issues.length}):\n`;
+        issues.forEach(issue => {
+            message += `  • ${issue.message}\n`;
+        });
+        message += '\n';
+    }
+
+    if (conflicts.length > 0) {
+        message += `Конфликты (${conflicts.length}):\n`;
+        conflicts.slice(0, 10).forEach(item => {
+            message += `  • ${item.lesson.group}, ${item.lesson.day}, ${item.lesson.pair}\n`;
+            item.conflicts.forEach(c => {
+                message += `    - ${c.message}\n`;
+            });
+        });
+        if (conflicts.length > 10) {
+            message += `  ... и ещё ${conflicts.length - 10} конфликтов\n`;
+        }
+    }
+
+    alert(message);
+    showNotification(`Найдено ${issues.length + conflicts.length} проблем`, 'warning');
+}
+
+// ===================== ЭКСПОРТ/ИМПОРТ =====================
+function exportToJSON() {
+    if (scheduleData.length === 0) {
+        showNotification('Нет данных для экспорта', 'warning');
+        return;
+    }
+
+    const data = {
+        period: period,
+        schedule: scheduleData,
+        exportedAt: new Date().toISOString(),
+        source: 'editor_manual_export'
     };
 
-    reader.readAsArrayBuffer(file);
-}
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `schedule_backup_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 0);
 
-function parseExcelData(lines) {
-    const schedule = [];
-    let periodStart = '', periodEnd = '';
-
-    for (const row of lines) {
-        const lineStr = String(row.join(';'));
-        const match = lineStr.match(/с (\d{2})\.(\d{2})\.(\d{4}) по (\d{2})\.(\d{2})\.(\d{4})/);
-        if (match) {
-            periodStart = `${match[3]}-${match[2]}-${match[1]}`;
-            periodEnd = `${match[6]}-${match[5]}-${match[4]}`;
-            break;
-        }
-    }
-
-    let dataStartRow = -1;
-    const daysOrder = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
-    let currentDay = '';
-
-    for (let i = 0; i < lines.length; i++) {
-        const row = lines[i];
-        const firstCell = String(row[0] || '').toLowerCase().trim();
-
-        const foundDay = daysOrder.find(day => firstCell.includes(day));
-        if (foundDay) {
-            currentDay = foundDay.charAt(0).toUpperCase() + foundDay.slice(1);
-            continue;
-        }
-
-        const lessonNum = String(row[1] || '').trim();
-        if (!lessonNum || isNaN(parseInt(lessonNum))) continue;
-
-        for (let col = 2; col < row.length; col += 2) {
-            const cellText = (String(row[col] || '') + ' ' + String(row[col + 1] || '')).trim();
-            if (!cellText || cellText.toLowerCase().includes('классный час')) continue;
-
-            const subject = cellText.split('/')[0].trim();
-            if (subject) {
-                schedule.push({
-                    day: currentDay || 'Понедельник',
-                    pair: getLessonNumber(lessonNum),
-                    subject: subject,
-                    teacher: 'Не указан',
-                    room: '—',
-                    group: `Группа_${col}`
-                });
-            }
-        }
-    }
-
-    return { schedule, periodStart, periodEnd };
-}
-
-function getLessonNumber(numStr) {
-    const n = parseInt(numStr);
-    if (n <= 2) return '1-2 урок';
-    if (n <= 4) return '3-4 урок';
-    if (n <= 6) return '5-6 урок';
-    if (n <= 8) return '7-8 урок';
-    return '9-10 урок';
+    showNotification('Резервная копия сохранена!', 'success');
 }
 
 function handleJSONImport(event) {
@@ -588,19 +555,15 @@ function handleJSONImport(event) {
             }
 
             if (data.period) {
-                const match = data.period.match(/(\d{2})\.(\d{2})\.(\d{4})\s*–\s*(\d{2})\.(\d{2})\.(\d{4})/);
-                if (match) {
-                    periodStart = `${match[3]}-${match[2]}-${match[1]}`;
-                    periodEnd = `${match[6]}-${match[5]}-${match[4]}`;
-                    document.getElementById('periodStart').value = periodStart;
-                    document.getElementById('periodEnd').value = periodEnd;
-                }
+                period.start = data.period.start || period.start;
+                period.end = data.period.end || period.end;
+                document.getElementById('periodStart').value = period.start;
+                document.getElementById('periodEnd').value = period.end;
             }
 
             scheduleData = data.schedule;
-            saveToStorage();
             renderTable();
-            showNotification(`✅ Импортировано ${scheduleData.length} занятий из JSON!`, 'success');
+            showNotification(`✅ Импортировано ${scheduleData.length} занятий!`, 'success');
         } catch (error) {
             console.error('Ошибка импорта JSON:', error);
             showNotification(`Ошибка импорта JSON: ${error.message}`, 'error');
@@ -611,60 +574,7 @@ function handleJSONImport(event) {
     reader.readAsText(file);
 }
 
-function exportToJSON() {
-    if (scheduleData.length === 0) {
-        showNotification('Нет данных для экспорта', 'warning');
-        return;
-    }
-
-    const periodStr = periodStart && periodEnd
-        ? `Период: ${formatDateForDisplay(periodStart)} – ${formatDateForDisplay(periodEnd)}`
-        : 'Период не задан';
-
-    const data = {
-        period: periodStr,
-        schedule: scheduleData,
-        exportedAt: new Date().toISOString(),
-        source: 'editor_export'
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `schedule_${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }, 0);
-
-    showNotification('Файл сохранён!', 'success');
-}
-
-function clearStorage() {
-    if (!confirm('⚠️ ВНИМАНИЕ! Все данные будут УДАЛЕНЫ безвозвратно. Продолжить?')) return;
-
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(DATA_STORAGE_KEY);
-    scheduleData = [];
-    periodStart = '';
-    periodEnd = '';
-    document.getElementById('periodStart').value = '';
-    document.getElementById('periodEnd').value = '';
-    renderTable();
-    updateStatusBar();
-    updateStorageStatus('⚠️ Данные очищены. Импортируйте новые данные.', 'warning');
-    showNotification('Данные удалены из localStorage', 'success');
-}
-
 // ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
-function formatDateForDisplay(dateStr) {
-    const [y, m, d] = dateStr.split('-');
-    return `${d}.${m}.${y}`;
-}
-
 function showNotification(message, type) {
     const notif = document.getElementById('notification');
     notif.textContent = message;
@@ -672,7 +582,7 @@ function showNotification(message, type) {
 
     setTimeout(() => {
         notif.classList.remove('show');
-    }, 3500);
+    }, 4000);
 }
 
 // Закрытие модалки по клику вне контента
@@ -688,5 +598,9 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         openAddModal();
+    }
+    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        saveData();
     }
 });
